@@ -125,11 +125,12 @@
 </script>
 <style lang="scss">
     .home {
-        width: 1000px;
-        margin: 50px auto;
+        width: 100%;
+        max-width: 1000px;
+        margin: auto auto;
     }
     .chat-list {
-        height: 500px;
+        height: calc(100vh - 150px);
         overflow-y: scroll;
     }
     .message {
