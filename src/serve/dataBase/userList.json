@@ -1,0 +1,17 @@
+[
+    {
+        "uuid": "serve",
+        "nickname": "robot",
+        "avatar": "images/robot.jpg"
+    },
+    {
+        "uuid": "ed4d2110-9a70-40a8-be41-7eb65c2c0636",
+        "nickname": "Marco",
+        "avatar": "images/user.jpg"
+    },
+    {
+        "uuid": "ed4d2110-9a70-40a8-be41-7eb65c2c0637",
+        "nickname": "anymous",
+        "avatar": "images/user2.jpg"
+    }
+]
