@@ -14,32 +14,20 @@
             </a-list>
         </div>
         <div class="message">
-            <a-input-group compact>
-                <a-input
-                    style="width: 20%"
-                    placeholder="昵称"
-                    type="text"
-                    readOnly
-                    :disabled="!userInfo.nickname"
-                    v-model="userInfo.nickname"
-                    :maxLength="8"
-                />
-                <a-input
-                    :disabled="!userInfo.nickname"
-                    style="width: 60%"
-                    placeholder="发送消息"
-                    type="text"
-                    v-model="send"
-                />
+            <a-input-search
+                v-model="send"
+                :addon-before="userInfo.nickname || ''
+                " placeholder="发送消息"
+                @search="sendMessage"
+            >
                 <a-button
+                    slot="enterButton"
                     type="primary"
-                    style="width: 20%"
                     :disabled="!userInfo.nickname || !send"
-                    @click="sendMessage"
                 >
                     发送
                 </a-button>
-            </a-input-group>
+            </a-input-search>
         </div>
     </a-card>
 </template>
