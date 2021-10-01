@@ -1,6 +1,6 @@
 <template>
     <a-card class="home" title="chat" :body-style="{ padding: '16px' }">
-        <div class="chat-list">
+        <div class="chat-list" id="chatList">
             <a-list item-layout="horizontal" :data-source="message">
                 <a-list-item slot="renderItem" slot-scope="item, index">
                     <a-list-item-meta :description="item.msg">
@@ -70,8 +70,9 @@
             };
         },
         created() {
-            this.socket = io('http://localhost:3000', {
+            this.socket = io('http://chat.ihtmlcss.com:3000', {
                 transports: ['websocket'],
+
                 rememberUpgrade: true,
                 auth: {
                     token: this.getQuery('uuid'),
@@ -95,6 +96,9 @@
             });
             this.socket.on('message', (res) => {
                 this.message.push(res);
+                this.$nextTick(() => {
+                    this.setChatList();
+                });
             });
             this.socket.emit('start');
         },
@@ -111,6 +115,10 @@
             },
             encryptData(data) {
                 return encryptor.encrypt(data);
+            },
+            setChatList() {
+                const $el = document.getElementById('chatList');
+                $el.scrollTop = $el.scrollHeight;
             },
             sendMessage() {
                 this.socket.emit('message', {
