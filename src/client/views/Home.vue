@@ -72,6 +72,7 @@
         created() {
             this.socket = io('http://chat.ihtmlcss.com:3000', {
                 transports: ['websocket'],
+
                 rememberUpgrade: true,
                 auth: {
                     token: this.getQuery('uuid'),
