@@ -156,10 +156,16 @@
             },
             encryptData(data) {
                 const str = JSON.stringify(data);
+                const size = 20;
                 const result = [];
-                if (str.length > 20) {
-                    console.log('需要分段加密');
+                if (str.length > size) {
+                    const splitCount = Math.ceil(str.length / size);
+                    console.log('需要分段加密', splitCount);
+                    for (let i in splitCount) {
+                        console.log(i);
+                    }
                 }
+                console.log('result', result);
                 return encryptor.encrypt(JSON.stringify(data));
             },
             setChatList() {
