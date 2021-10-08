@@ -1,40 +1,87 @@
 <template>
-    <a-card class="home" title="chat" :body-style="{ padding: '16px' }">
-        <div class="chat-list" id="chatList">
-            <a-list item-layout="horizontal" :data-source="message">
-                <a-list-item slot="renderItem" slot-scope="item, index">
-                    <a-list-item-meta :description="item.msg">
-                        <span slot="title">
-                            {{ item.from.nickname }}
-                            <span class="chat-time">{{ item.time }}</span>
-                        </span>
-                        <a-avatar slot="avatar" :src="item.from.avatar" />
-                    </a-list-item-meta>
-                </a-list-item>
-            </a-list>
-        </div>
-        <div class="message">
-            <a-input-search
-                v-model="send"
-                :addon-before="userInfo.nickname || ''
-                " placeholder="发送消息"
-                @search="sendMessage"
-            >
+    <a-spin :spinning="!onLine" tip="Connect...">
+        <a-icon slot="indicator" type="loading" style="font-size: 24px" spin />
+        <a-card
+            id="chatListBody"
+            class="home"
+            :bordered="false"
+            :body-style="{ padding: '0' }"
+        >
+            <template slot="title"> Chat（{{ onLineCount }}） </template>
+            <template slot="extra">
                 <a-button
-                    slot="enterButton"
-                    type="primary"
-                    :disabled="!userInfo.nickname || !send"
+                    type="default"
+                    :disabled="!userInfo.uuid"
+                    @click="userListVisible = !userListVisible"
+                    icon="team"
+                />
+            </template>
+
+            <div class="chat-list" id="chatList">
+                <a-list item-layout="horizontal" :data-source="message">
+                    <a-list-item slot="renderItem" slot-scope="item, index">
+                        <a-comment
+                            :author="item.from.nickname"
+                            :avatar="item.from.avatar"
+                            :datetime="moment(item.time).fromNow()"
+                        >
+                            <div
+                                :class="
+                                    item.from.uuid === 'serve'
+                                        ? 'serve-message'
+                                        : ''
+                                "
+                                slot="content"
+                            >
+                                {{ item.msg }}
+                            </div>
+                        </a-comment>
+                    </a-list-item>
+                </a-list>
+            </div>
+            <div class="message">
+                <a-input-search
+                    size="large"
+                    v-model="send"
+                    placeholder="发送消息"
+                    @search="sendMessage"
                 >
-                    发送
-                </a-button>
-            </a-input-search>
-        </div>
-    </a-card>
+                    <a-button slot="enterButton" type="primary">
+                        发送
+                    </a-button>
+                </a-input-search>
+            </div>
+            <a-drawer
+                placement="right"
+                :closable="false"
+                :visible="userListVisible"
+                @close="userListVisible = false"
+            >
+                <template slot="title">
+                    当前在线 {{ onLineCount }} 人
+                </template>
+                <a-empty
+                    v-if="onLineList.length === 0"
+                    description="无人在线"
+                ></a-empty>
+                <template v-else>
+                    <p v-for="item in onLineList">
+                        <a-badge dot>
+                            <a-avatar :src="item.avatar" :size="32"></a-avatar>
+                        </a-badge>
+                        {{ item.nickname }}
+                    </p>
+                </template>
+            </a-drawer>
+        </a-card>
+    </a-spin>
 </template>
 
 <script>
+    import PerfectScrollbar from 'perfect-scrollbar';
     import { v4 as uuidv4 } from 'uuid';
     import { io } from 'socket.io-client';
+    import moment from 'moment';
     import JSEncrypt from 'jsencrypt';
     const encryptor = new JSEncrypt(); // 创建加密对象实例
     const pubKey =
@@ -45,12 +92,17 @@
         name: 'Home',
         data() {
             return {
-                uuid: window.localStorage.getItem('uuid') || uuidv4(),
+                onLine: true,
+                ps: null,
                 socket: null,
+                userListVisible: false,
                 message: [],
-                send: '',
+                onLineList: [],
+                onLineCount: 0,
+                send: 'admin@123',
                 nicknameEditDisabled: false,
                 userInfo: {
+                    username: '',
                     nickname: '',
                     uuid: '',
                     avatar: '',
@@ -58,83 +110,126 @@
             };
         },
         created() {
-            this.socket = io('http://chat.ihtmlcss.com:3000', {
-                transports: ['websocket'],
-
-                rememberUpgrade: true,
-                auth: {
-                    token: this.getQuery('uuid'),
-                },
-                query: {
-                    uuid: this.getQuery('uuid'),
-                    encrypt: this.encryptData(JSON.stringify(this.userInfo)),
-                },
-            });
-            this.socket.on('start', (res) => {
-                console.log('start', res);
-            });
-            this.socket.on('loginIn', (res) => {
-                this.userInfo = res;
-            });
-            this.socket.on('welcome', (res) => {
-                this.message.push(res);
-            });
-            this.socket.on('waiting', (res) => {
-                console.log(res);
-            });
-            this.socket.on('message', (res) => {
-                this.message.push(res);
-                this.$nextTick(() => {
-                    this.setChatList();
-                });
-            });
-            this.socket.emit('start');
+            this.connect();
+        },
+        mounted() {
+            this.initScrollBar();
         },
         methods: {
-            getQuery(key) {
-                let query = {};
-                let search = window.location.search.replace(/^\?/, '');
-                search = search.split('&');
-                search.forEach((item) => {
-                    const arr = item.split('=');
-                    query[arr[0]] = arr[1];
+            moment,
+            initScrollBar() {
+                this.ps = new PerfectScrollbar('#chatList', {
+                    wheelSpeed: 2,
+                    wheelPropagation: false,
+                    minScrollbarLength: 20,
                 });
-                return query[key] || null;
+            },
+            connect() {
+                this.socket = io(process.env.VUE_APP_BASE_URL, {
+                    transports: ['websocket'],
+                    autoConnect: false,
+                    rememberUpgrade: true,
+                    auth: {
+                        token: this.userInfo.uuid,
+                    },
+                    query: {
+                        uuid: this.userInfo.uuid,
+                    },
+                });
+                this.socket.connect();
+                this.socket.on('loginIn', (res) => {
+                    this.userInfo = res.data;
+                    this.message.push(res);
+                    this.ps.update();
+                });
+                this.socket.on('message', (res) => {
+                    this.message.push(res);
+                    this.$nextTick(() => {
+                        this.setChatList();
+                        this.ps.update();
+                    });
+                });
+                this.socket.on('onlineList', (res) => {
+                    this.onLineList = res.userList;
+                    this.onLineCount = res.count;
+                });
             },
             encryptData(data) {
-                return encryptor.encrypt(data);
+                const str = JSON.stringify(data);
+                const result = [];
+                if (str.length > 20) {
+                    console.log('需要分段加密');
+                }
+                return encryptor.encrypt(JSON.stringify(data));
             },
             setChatList() {
                 const $el = document.getElementById('chatList');
                 $el.scrollTop = $el.scrollHeight;
             },
             sendMessage() {
-                this.socket.emit('message', {
+                if (!this.send) {
+                    this.$message.warning('发送内容不能为空');
+                    return false;
+                }
+                const obj = {
                     nickname: this.userInfo.nickname,
                     msg: this.send,
-                    from: this.userInfo,
+                    // from: this.userInfo,
+                };
+                this.socket.emit('message', {
+                    encrypt: this.encryptData(obj),
                 });
                 this.send = '';
             },
         },
     };
 </script>
-<style lang="scss">
+<style lang="scss" scoped>
+    @import '~perfect-scrollbar/css/perfect-scrollbar.css';
     .home {
         width: 100%;
         max-width: 1000px;
         margin: auto auto;
     }
     .chat-list {
-        height: calc(100vh - 150px);
-        overflow-y: scroll;
+        width: 100%;
+        height: calc(100vh - 138px);
+        position: relative;
+        overflow: hidden;
+        padding-left: 16px;
+        padding-right: 16px;
     }
     .message {
-        margin-top: 16px;
+        border-top: 1px solid #dedede;
+        box-shadow: 0 -5px 10px rgba(125, 125, 125, 0.1);
+        padding: 16px 8px;
+        position: fixed;
+        bottom: 0;
+        width: 100%;
+        max-width: 1000px;
+        margin: auto;
+        background: #f9f9f9;
     }
     .chat-time {
         opacity: 0.45;
         font-size: 12px;
         margin-left: 10px;
+    }
+    .serve-message {
+        color: red;
+    }
+    ::v-deep .ant-list-item {
+        padding: 8px 0;
+    }
+    ::v-deep .ant-comment-inner {
+        padding: 8px 0;
+    }
+    ::v-deep .ant-card-head {
+        background: #f9f9f9;
+        padding: 0 8px;
+    }
+    ::v-deep .ant-card-head-title,
+    ::v-deep .ant-card-extra {
+        padding: 8px 0;
     }
 </style>

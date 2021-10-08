@@ -3,6 +3,7 @@ const io = require('socket.io')(app);
 const moment = require('moment');
 const uuidv4 = require('uuid').v4;
 const fs = require('fs-extra');
+const JSEncrypt = require('node-jsencrypt');
 const path = require('path');
 const userList = fs.readJsonSync(
     path.resolve(__dirname, 'dataBase/userList.json')
@@ -24,7 +25,8 @@ const privateKey =
     'ndfreaFwo2DJ03nOlkO5AkBc7tvF7JMAudwbo2Pzmjm7oaFOTZQzD4cnMlAqDFVv\n' +
     'QA6cKB2dzIQaOSGehceMUmciefyGLUY5bTdCNHYydvWM\n' +
     '-----END RSA PRIVATE KEY-----';
-
+const encrypt = new JSEncrypt();
+encrypt.setPrivateKey(privateKey);
 const PORT = 3000;
 
 //客户端计数
@@ -34,73 +36,127 @@ let clientCount = 0;
 let socketMap = {};
 
 app.listen(PORT);
-
+// 发送消息
+const sendMessage = (socket, msg, from, data = {}, type = 'message') => {
+    delete from.password;
+    delete from.username;
+    socket.emit(type, {
+        msg,
+        data,
+        from,
+        // encrypt: msg.encrypt,
+        time: moment().format('YYYY-MM-DD HH:mm:ss'),
+    });
+};
+// 获取用户
 const getUserByUuid = (uuid) => {
     return userList.filter((item) => {
         return item.uuid === uuid;
     });
 };
-
+// 更新在线用户列表
+const updateOnlineList = (socket) => {
+    const userList = [];
+    Object.keys(socketMap).forEach((item) => {
+        userList.push({
+            uuid: socketMap[item].uuid,
+            username: socketMap[item].username,
+            nickname: socketMap[item].nickname,
+            avatar: socketMap[item].avatar,
+        });
+    });
+    socket.emit('onlineList', {
+        userList,
+        count: Object.keys(socketMap).length,
+    });
+};
 io.on('connection', (socket) => {
     clientCount += 1;
-    const filter = getUserByUuid(socket.handshake.query.uuid);
-    if (filter.length > 0) {
-        socket.uuid = filter[0].uuid;
-        socket.nickname = filter[0].nickname;
-        socket.avatar = filter[0].avatar;
-        socket.emit('loginIn', filter[0]);
-        socket.emit('welcome', {
-            from: robot,
-            msg: `${socket.nickname}, welcome.`,
-            time: moment().format('YYYY-MM-DD h:mm:ss'),
-            encrypt: socket.encrypt,
-        });
-        socket.on('message', (data) => {
-            const users = Object.keys(socketMap);
-            users.forEach((item) => {
-                socketMap[item].emit('message', {
-                    msg: data.msg,
-                    from: filter[0],
-                    encrypt: data.encrypt,
-                    time: moment().format('YYYY-MM-DD h:mm:ss'),
-                });
-            });
-        });
-        socket.encrypt = socket.handshake.query.encrypt || uuidv4();
-        socket.clientNum = clientCount;
-        socketMap[socket.uuid] = socket;
-
-        socketMap[socket.uuid].emit('start');
-
-        socket.on('disconnect', (data) => {
-            console.log(data);
-        });
-        socket.on('start', () => {
-            console.log('start');
-            const filter = getUserByUuid(socket.handshake.query.uuid);
-            if (filter.length > 0) {
-                const users = Object.keys(socketMap);
-                users.forEach((item) => {
-                    if (socketMap[item].uuid !== socket.uuid) {
-                        socketMap[item].emit('message', {
-                            msg: `${socket.nickname} is comming.`,
-                            from: robot,
-                            time: moment().format('YYYY-MM-DD h:mm:ss'),
-                            encrypt: socket.encrypt,
+    if (!socket.uuid) {
+        sendMessage(socket, '你还未登录', robot);
+    }
+    socket.on('message', (encryptData) => {
+        let data = encrypt.decrypt(encryptData.encrypt);
+        console.log('encryptData', data);
+        if (!data) {
+            sendMessage(socket, '无效的密钥', robot);
+        } else {
+            data = JSON.parse(data);
+            if (!socket.uuid) {
+                const arr = data.msg.split('@');
+                if (arr.length !== 2) {
+                    sendMessage(socket, '登录命令不正确', robot);
+                } else {
+                    const username = arr[0];
+                    const password = arr[1];
+                    const filter2 = userList.filter((item) => {
+                        return (
+                            username === item.username &&
+                            password === item.password
+                        );
+                    });
+                    if (filter2.length === 0) {
+                        sendMessage(socket, '用户名或密码错误', robot);
+                    } else {
+                        socket.uuid = filter2[0].uuid;
+                        socket.nickname = filter2[0].nickname;
+                        socket.username = filter2[0].username;
+                        socket.avatar = filter2[0].avatar;
+                        socketMap[socket.uuid] = socket;
+                        sendMessage(
+                            socket,
+                            `${socket.nickname}, welcome.`,
+                            robot,
+                            {
+                                uuid: filter2[0].uuid,
+                                nickname: filter2[0].nickname,
+                                username: filter2[0].username,
+                                avatar: filter2[0].avatar,
+                            },
+                            'loginIn'
+                        );
+                        const users = Object.keys(socketMap);
+                        users.forEach((item) => {
+                            updateOnlineList(socketMap[item]);
+                            if (item !== socket.uuid) {
+                                sendMessage(
+                                    socketMap[item],
+                                    `${socket.nickname}, is comming.`,
+                                    robot
+                                );
+                            }
                         });
                     }
+                }
+            } else {
+                const form = getUserByUuid(socket.uuid);
+                const users = Object.keys(socketMap);
+                users.forEach((item) => {
+                    sendMessage(socketMap[item], data.msg, form[0]);
                 });
+                socket.encrypt = socket.handshake.query.encrypt || uuidv4();
+                socket.clientNum = clientCount;
             }
-        });
-    } else {
-        socket.emit('message', {
-            uuid: robot.uuid,
-            nickname: robot.nickname,
-            from: robot,
-            msg: '你还未登录',
-            time: moment().format('YYYY-MM-DD h:mm:ss'),
-            encrypt: socket.encrypt,
-        });
-    }
+        }
+    });
+
+    socket.on('disconnect', (reason) => {
+        const form = getUserByUuid(socket.uuid);
+        const users = Object.keys(socketMap);
+        if (form.length > 0) {
+            delete socketMap[socket.uuid];
+            users.forEach((item) => {
+                if (socketMap[item]) {
+                    sendMessage(
+                        socketMap[item],
+                        `${form[0].nickname} was leave`,
+                        robot
+                    );
+                    updateOnlineList(socketMap[item]);
+                }
+            });
+        }
+        clientCount -= 1;
+    });
 });
 console.log('websocket listening on port ' + PORT);

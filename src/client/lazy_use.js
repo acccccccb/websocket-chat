@@ -57,8 +57,10 @@ import {
     Carousel,
     Affix,
     TreeSelect,
+    Comment,
 } from 'ant-design-vue';
 
+Vue.use(Comment);
 Vue.use(Transfer);
 Vue.use(Divider);
 Vue.use(ConfigProvider);
