@@ -7,8 +7,17 @@
             :bordered="false"
             :body-style="{ padding: '0' }"
         >
-            <template slot="title"> Chat（{{ onLineCount }}） </template>
+            <template slot="title">
+                Chat（{{ onLineCount }}） [{{ innerHeight }}]</template
+            >
             <template slot="extra">
+                <a-button
+                    style="margin-right: 10px;"
+                    type="default"
+                    :disabled="message.length === 0"
+                    @click="clearMessage"
+                    icon="delete"
+                />
                 <a-button
                     type="default"
                     :disabled="!userInfo.uuid"
@@ -22,9 +31,23 @@
                     <a-list-item slot="renderItem" slot-scope="item, index">
                         <a-comment
                             :author="item.from.nickname"
-                            :avatar="item.from.avatar"
                             :datetime="moment(item.time).fromNow()"
                         >
+                            <template slot="avatar">
+                                <a-avatar
+                                    v-if="item.from.uuid === 'serve'"
+                                    icon="robot"
+                                    style="background: #ff4d4f"
+                                ></a-avatar>
+                                <a-avatar
+                                    v-else
+                                    :style="{
+                                        background: stc(item.from.nickname),
+                                    }"
+                                >
+                                    {{ item.from.nickname.substring(0, 2) }}
+                                </a-avatar>
+                            </template>
                             <div
                                 :class="
                                     item.from.uuid === 'serve'
@@ -39,18 +62,7 @@
                     </a-list-item>
                 </a-list>
             </div>
-            <div class="message">
-                <a-input-search
-                    size="large"
-                    v-model="send"
-                    placeholder="发送消息"
-                    @search="sendMessage"
-                >
-                    <a-button slot="enterButton" type="primary">
-                        发送
-                    </a-button>
-                </a-input-search>
-            </div>
+
             <a-drawer
                 placement="right"
                 :closable="false"
@@ -67,31 +79,57 @@
                 <template v-else>
                     <p v-for="item in onLineList">
                         <a-badge dot>
-                            <a-avatar :src="item.avatar" :size="32"></a-avatar>
+                            <a-avatar
+                                :size="32"
+                                :style="{
+                                    background: stc(item.nickname),
+                                }"
+                            >
+                                {{ item.nickname.substring(0, 2) }}
+                            </a-avatar>
                         </a-badge>
                         {{ item.nickname }}
                     </p>
                 </template>
             </a-drawer>
         </a-card>
+        <div class="message">
+            <a-input-search
+                size="large"
+                v-model="send"
+                placeholder="发送消息"
+                @search="sendMessage"
+                @focus="listenTypeEvent"
+                @blur="listenTypeEvent"
+            >
+                <a-button slot="enterButton" type="primary">
+                    发送
+                </a-button>
+            </a-input-search>
+        </div>
     </a-spin>
 </template>
 
 <script>
+    import stc from 'string-to-color';
     import PerfectScrollbar from 'perfect-scrollbar';
     import { v4 as uuidv4 } from 'uuid';
     import { io } from 'socket.io-client';
     import moment from 'moment';
     import JSEncrypt from 'jsencrypt';
-    const encryptor = new JSEncrypt(); // 创建加密对象实例
-    const pubKey =
-        '-----BEGIN PUBLIC KEY-----MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQC4gFOiRiCkUSXOI0ZltyQNqmLKq81HmsMLZ4OXQ6+nDe3FB0EgEB9oHPRwDgc39aB7T8cvhp3/kH0qmhVz304EULAVFui4Ox1FUY7cNGwugrNGu6xe5o+qJIBKz24ibTgudkh/yiF86EYsks+vkkt/Kz3f+cxKHYSh1CCFyouKRQIDAQAB-----END PUBLIC KEY-----';
-
-    encryptor.setPublicKey(pubKey); //设置公钥
+    const encrypt = new JSEncrypt(); // 创建加密对象实例
+    const decrypt = new JSEncrypt(); // 创建加密对象实例
+    // rsa_public_key
+    const pubKey = process.env.VUE_APP_PUB_KEY;
+    // rsa_1024_priv
+    const privateKey = process.env.VUE_APP_PRV_KEY.replace(/\\n/g, '\n');
+    encrypt.setPublicKey(pubKey); //设置公钥
+    decrypt.setPrivateKey(privateKey); // 设置私钥
     export default {
         name: 'Home',
         data() {
             return {
+                innerHeight: 0,
                 onLine: true,
                 ps: null,
                 socket: null,
@@ -114,9 +152,29 @@
         },
         mounted() {
             this.initScrollBar();
+            window.onresize = () => {
+                this.listenTypeEvent();
+            };
         },
         methods: {
+            stc,
             moment,
+            listenTypeEvent() {
+                setTimeout(() => {
+                    // document.getElementById(
+                    //     'chatList'
+                    // ).style.height = `${window.innerHeight}px`;
+                    // document.getElementById(
+                    //     'app'
+                    // ).style.height = `${window.innerHeight}px`;
+                    // document.body.style.height = `${window.innerHeight}px`;
+                    // this.innerHeight = document.getElementById(
+                    //     'app'
+                    // ).style.height;
+                    // window.scroll(0, 0);
+                    this.ps.update();
+                }, 100);
+            },
             initScrollBar() {
                 this.ps = new PerfectScrollbar('#chatList', {
                     wheelSpeed: 2,
@@ -129,44 +187,51 @@
                     transports: ['websocket'],
                     autoConnect: false,
                     rememberUpgrade: true,
-                    auth: {
-                        token: this.userInfo.uuid,
-                    },
-                    query: {
-                        uuid: this.userInfo.uuid,
-                    },
                 });
                 this.socket.connect();
                 this.socket.on('loginIn', (res) => {
-                    this.userInfo = res.data;
-                    this.message.push(res);
+                    this.userInfo = this.decryptData(res.encrypt).data;
+                    this.message.push(this.decryptData(res.encrypt));
                     this.ps.update();
                 });
                 this.socket.on('message', (res) => {
-                    this.message.push(res);
+                    this.message.push(this.decryptData(res.encrypt));
                     this.$nextTick(() => {
                         this.setChatList();
                         this.ps.update();
                     });
                 });
                 this.socket.on('onlineList', (res) => {
-                    this.onLineList = res.userList;
-                    this.onLineCount = res.count;
+                    const result = this.decryptData(res.encrypt);
+                    this.onLineList = result.userList;
+                    this.onLineCount = result.count;
                 });
             },
-            encryptData(data) {
+            encryptData(data, len = 64) {
                 const str = JSON.stringify(data);
-                const size = 20;
                 const result = [];
-                if (str.length > size) {
-                    const splitCount = Math.ceil(str.length / size);
-                    console.log('需要分段加密', splitCount);
-                    for (let i in splitCount) {
-                        console.log(i);
-                    }
+                const splitCount = Math.ceil(str.length / len);
+                for (let i = 0; i < splitCount; i++) {
+                    const start = i * len;
+                    const end =
+                        (i + 1) * len < str.length ? (i + 1) * len : str.length;
+                    const substr = str.substring(start, end);
+                    result.push(substr);
                 }
-                console.log('result', result);
-                return encryptor.encrypt(JSON.stringify(data));
+                return result.map((item) => {
+                    return encrypt.encrypt(item);
+                });
+            },
+            decryptData(encryptArr) {
+                try {
+                    let data = encryptArr.map((item) => {
+                        const decyptStr = decrypt.decrypt(item);
+                        return decyptStr ? decyptStr : '';
+                    });
+                    return JSON.parse(data.join(''));
+                } catch (e) {
+                    return {};
+                }
             },
             setChatList() {
                 const $el = document.getElementById('chatList');
@@ -180,12 +245,24 @@
                 const obj = {
                     nickname: this.userInfo.nickname,
                     msg: this.send,
-                    // from: this.userInfo,
+                    from: this.userInfo,
                 };
                 this.socket.emit('message', {
                     encrypt: this.encryptData(obj),
                 });
                 this.send = '';
+            },
+            clearMessage() {
+                this.$confirm({
+                    title: '是否清空聊天记录',
+                    okText: '清空',
+                    cancelText: '取消',
+                    iconType: 'warning',
+                    onOk: () => {
+                        this.message = [];
+                        this.$message.success('已清空聊天记录');
+                    },
+                });
             },
         },
     };
@@ -196,10 +273,10 @@
         width: 100%;
         max-width: 1000px;
         margin: auto auto;
+        padding-top: 50px;
     }
     .chat-list {
         width: 100%;
-        height: calc(100vh - 138px);
         position: relative;
         overflow: hidden;
         padding-left: 16px;
@@ -212,6 +289,7 @@
         position: fixed;
         bottom: 0;
         width: 100%;
+        height: 73px;
         max-width: 1000px;
         margin: auto;
         background: #f9f9f9;
@@ -222,7 +300,20 @@
         margin-left: 10px;
     }
     .serve-message {
-        color: red;
+        color: #ff4d4f;
+        font-style: italic;
+    }
+    ::v-deep .ant-card-head {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        max-width: 1000px;
+        margin: auto;
+        z-index: 999;
+    }
+    ::v-deep .ant-list {
+        word-break: break-all;
     }
     ::v-deep .ant-list-item {
         padding: 8px 0;

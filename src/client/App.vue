@@ -5,6 +5,8 @@
 </template>
 
 <style lang="scss">
+    html,
+    body,
     #app {
         font-family: Avenir, Helvetica, Arial, sans-serif;
         -webkit-font-smoothing: antialiased;

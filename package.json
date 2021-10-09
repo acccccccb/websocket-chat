@@ -17,6 +17,7 @@
         "perfect-scrollbar": "^1.5.2",
         "socket.io": "^4.2.0",
         "socket.io-client": "^4.2.0",
+        "string-to-color": "^2.2.2",
         "uuid": "^8.3.2",
         "vue": "^2.6.11",
         "vue-router": "^3.2.0",
