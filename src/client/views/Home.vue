@@ -5,11 +5,11 @@
             id="chatListBody"
             class="home"
             :bordered="false"
-            :body-style="{ padding: '0' }"
+            :body-style="{
+                padding: '0',
+            }"
         >
-            <template slot="title">
-                Chat（{{ onLineCount }}） [{{ innerHeight }}]</template
-            >
+            <template slot="title"> Chat（{{ onLineCount }}）</template>
             <template slot="extra">
                 <a-button
                     style="margin-right: 10px;"
@@ -26,20 +26,43 @@
                 />
             </template>
 
-            <div class="chat-list" id="chatList">
+            <div
+                class="chat-list"
+                id="chatList"
+                :style="{
+                    height: innerHeight - 73 - 48 + 'px',
+                }"
+            >
                 <a-list item-layout="horizontal" :data-source="message">
                     <a-list-item slot="renderItem" slot-scope="item, index">
-                        <a-comment
-                            :author="item.from.nickname"
-                            :datetime="moment(item.time).fromNow()"
-                        >
+                        <a-comment :datetime="moment(item.time).fromNow()">
+                            <template slot="author">
+                                <span v-if="item.from.level === 0">
+                                    <strong style="color: #ff4d4f;">
+                                        {{ item.from.nickname }}
+                                    </strong>
+                                </span>
+                                <span v-else>{{ item.from.nickname }}</span>
+                            </template>
                             <template slot="avatar">
+                                <a-badge
+                                    v-if="item.from.level === 0"
+                                    :offset="[-3, 3]"
+                                >
+                                    <a-icon
+                                        slot="count"
+                                        type="sketch-circle"
+                                        theme="filled"
+                                        style="color: #108ee9;background:#fff;border-radius: 50%;"
+                                    />
+                                    <a-avatar
+                                        shape="square"
+                                        icon="robot"
+                                        style="background: #ff4d4f"
+                                    ></a-avatar>
+                                </a-badge>
                                 <a-avatar
-                                    v-if="item.from.uuid === 'serve'"
-                                    icon="robot"
-                                    style="background: #ff4d4f"
-                                ></a-avatar>
-                                <a-avatar
+                                    shape="square"
                                     v-else
                                     :style="{
                                         background: stc(item.from.nickname),
@@ -48,15 +71,25 @@
                                     {{ item.from.nickname.substring(0, 2) }}
                                 </a-avatar>
                             </template>
-                            <div
-                                :class="
-                                    item.from.uuid === 'serve'
-                                        ? 'serve-message'
-                                        : ''
-                                "
-                                slot="content"
-                            >
-                                {{ item.msg }}
+                            <div slot="content">
+                                <div
+                                    v-if="item.from.level === 0"
+                                    class="message-content serve-message"
+                                >
+                                    {{ item.msg }}
+                                </div>
+                                <div
+                                    v-else-if="item.from.uuid === userInfo.uuid"
+                                    class="message-content my-message"
+                                >
+                                    {{ item.msg }}
+                                </div>
+                                <div
+                                    v-else
+                                    class="message-content other-message"
+                                >
+                                    {{ item.msg }}
+                                </div>
                             </div>
                         </a-comment>
                     </a-list-item>
@@ -78,8 +111,15 @@
                 ></a-empty>
                 <template v-else>
                     <p v-for="item in onLineList">
-                        <a-badge dot>
+                        <a-badge v-if="item.level === 0" :offset="[-3, 3]">
+                            <a-icon
+                                slot="count"
+                                type="sketch-circle"
+                                theme="filled"
+                                style="color: #108ee9;background:#fff;border-radius: 50%;"
+                            />
                             <a-avatar
+                                shape="square"
                                 :size="32"
                                 :style="{
                                     background: stc(item.nickname),
@@ -88,12 +128,30 @@
                                 {{ item.nickname.substring(0, 2) }}
                             </a-avatar>
                         </a-badge>
+                        <a-badge v-else dot color="green">
+                            <a-avatar
+                                shape="square"
+                                :size="32"
+                                :style="{
+                                    background: stc(item.nickname),
+                                }"
+                            >
+                                {{ item.nickname.substring(0, 2) }}
+                            </a-avatar>
+                        </a-badge>
+
                         {{ item.nickname }}
                     </p>
                 </template>
             </a-drawer>
         </a-card>
-        <div class="message">
+        <div
+            class="message"
+            id="message"
+            :style="{
+                top: innerHeight - 73 + 'px',
+            }"
+        >
             <a-input-search
                 size="large"
                 v-model="send"
@@ -129,7 +187,9 @@
         name: 'Home',
         data() {
             return {
+                resizeTimmer: null,
                 innerHeight: 0,
+                clientHeight: 0,
                 onLine: true,
                 ps: null,
                 socket: null,
@@ -140,6 +200,7 @@
                 send: 'admin@123',
                 nicknameEditDisabled: false,
                 userInfo: {
+                    level: '',
                     username: '',
                     nickname: '',
                     uuid: '',
@@ -151,29 +212,34 @@
             this.connect();
         },
         mounted() {
-            this.initScrollBar();
             window.onresize = () => {
                 this.listenTypeEvent();
             };
+            this.$nextTick(() => {
+                this.innerHeight = window.innerHeight;
+                this.clientHeight = document.documentElement.clientHeight;
+                this.initScrollBar();
+            });
         },
         methods: {
             stc,
             moment,
             listenTypeEvent() {
                 setTimeout(() => {
-                    // document.getElementById(
-                    //     'chatList'
-                    // ).style.height = `${window.innerHeight}px`;
-                    // document.getElementById(
-                    //     'app'
-                    // ).style.height = `${window.innerHeight}px`;
-                    // document.body.style.height = `${window.innerHeight}px`;
-                    // this.innerHeight = document.getElementById(
-                    //     'app'
-                    // ).style.height;
-                    // window.scroll(0, 0);
+                    this.innerHeight = window.innerHeight;
                     this.ps.update();
+                    window.scroll(0, 0);
+                    this.$nextTick(() => {
+                        this.setChatList();
+                    });
                 }, 100);
+            },
+            listenBlurEvent() {
+                setTimeout(() => {
+                    this.innerHeight = window.innerHeight;
+                    window.scroll(0, 0);
+                    this.ps.update();
+                }, 0);
             },
             initScrollBar() {
                 this.ps = new PerfectScrollbar('#chatList', {
@@ -271,6 +337,7 @@
     @import '~perfect-scrollbar/css/perfect-scrollbar.css';
     .home {
         width: 100%;
+        height: 100%;
         max-width: 1000px;
         margin: auto auto;
         padding-top: 50px;
@@ -287,7 +354,7 @@
         box-shadow: 0 -5px 10px rgba(125, 125, 125, 0.1);
         padding: 16px 8px;
         position: fixed;
-        bottom: 0;
+        /*bottom: 0;*/
         width: 100%;
         height: 73px;
         max-width: 1000px;
@@ -299,7 +366,21 @@
         font-size: 12px;
         margin-left: 10px;
     }
+    .message-content {
+        line-height: 100%;
+        padding: 12px 8px;
+        border-radius: 6px;
+    }
+    .my-message {
+        background: #1890ff;
+        color: #fff;
+    }
+    .other-message {
+        background: #ededed;
+        color: #333;
+    }
     .serve-message {
+        background: #ffe3db;
         color: #ff4d4f;
         font-style: italic;
     }
@@ -317,6 +398,7 @@
     }
     ::v-deep .ant-list-item {
         padding: 8px 0;
+        border-bottom: none;
     }
     ::v-deep .ant-comment-inner {
         padding: 8px 0;

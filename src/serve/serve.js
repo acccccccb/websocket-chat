@@ -30,6 +30,9 @@ let socketMap = {};
 app.listen(PORT);
 // 发送消息
 const sendMessage = (socket, msg, from, data = {}, type = 'message') => {
+    if (!socket) {
+        return;
+    }
     delete from.password;
     delete from.username;
     const obj = {
@@ -45,6 +48,9 @@ const sendMessage = (socket, msg, from, data = {}, type = 'message') => {
 
 // 更新在线用户列表
 const updateOnlineList = (socket) => {
+    if (!socket) {
+        return;
+    }
     const list = [];
     Object.keys(socketMap).forEach((item) => {
         list.push({
@@ -52,6 +58,7 @@ const updateOnlineList = (socket) => {
             username: socketMap[item].username,
             nickname: socketMap[item].nickname,
             avatar: socketMap[item].avatar,
+            level: socketMap[item].level,
         });
     });
     const obj = {
@@ -103,16 +110,18 @@ io.on('connection', (socket) => {
                             socket.nickname = filter[0].nickname;
                             socket.username = filter[0].username;
                             socket.avatar = filter[0].avatar;
+                            socket.level = filter[0].level;
                             socketMap[socket.uuid] = socket;
                             sendMessage(
                                 socket,
-                                `${socket.nickname}, welcome.`,
+                                `${socket.nickname} 登陆成功`,
                                 robot,
                                 {
                                     uuid: filter[0].uuid,
                                     nickname: filter[0].nickname,
                                     username: filter[0].username,
                                     avatar: filter[0].avatar,
+                                    level: filter[0].level,
                                 },
                                 'loginIn'
                             );
@@ -122,7 +131,7 @@ io.on('connection', (socket) => {
                                 if (item !== socket.uuid) {
                                     sendMessage(
                                         socketMap[item],
-                                        `${socket.nickname}, is comming.`,
+                                        `${socket.nickname} 来了`,
                                         robot
                                     );
                                 }
@@ -155,7 +164,7 @@ io.on('connection', (socket) => {
                 if (socketMap[item]) {
                     sendMessage(
                         socketMap[item],
-                        `${form[0].nickname} was leave`,
+                        `${form[0].nickname} 走了`,
                         robot
                     );
                     updateOnlineList(socketMap[item]);
