@@ -298,6 +298,13 @@
                     this.onLine = true;
                     this.loadingText = '连接成功';
                 });
+                this.socket.on('logout', (res) => {
+                    this.onLine = false;
+                    this.onlineStatus = 'error';
+                    this.loadingText = res.msg;
+                    localStorage.removeItem('token');
+                    this.socket.close();
+                });
                 this.socket.io.on('error', () => {
                     this.onLine = false;
                     this.loadingText = '与服务器的连接已断开';
@@ -330,7 +337,7 @@
                 });
                 this.socket.connect();
             },
-            encryptData(data, len = 64) {
+            encryptData(data, len = 32) {
                 const str = JSON.stringify(data);
                 const result = [];
                 const splitCount = Math.ceil(str.length / len);
@@ -380,7 +387,7 @@
                     title: '是否清空聊天记录',
                     okText: '清空',
                     cancelText: '取消',
-                    iconType: 'warning',
+                    icon: 'warning',
                     onOk: () => {
                         this.message = [];
                         this.$message.success('已清空聊天记录');
@@ -392,7 +399,7 @@
                     title: '确定要退出登陆吗',
                     okText: '退出',
                     cancelText: '取消',
-                    iconType: 'warning',
+                    icon: 'warning',
                     onOk: () => {
                         localStorage.removeItem('token');
                         this.onLine = false;
@@ -446,7 +453,7 @@
         margin-left: 10px;
     }
     .message-content {
-        line-height: 100%;
+        line-height: 160%;
         padding: 12px 8px;
         border-radius: 6px;
     }

@@ -26,9 +26,6 @@ const getUserByUuid = (uuid) => {
 };
 const robot = getUserByUuid('serve')[0];
 
-//客户端计数
-let clientCount = 0;
-
 //存储客户端socket
 let socketMap = {};
 
@@ -74,15 +71,25 @@ const updateOnlineList = (socket) => {
         encrypt: encryptData(obj),
     });
 };
+// 登出
+const logout = (socket) => {
+    if (socket) {
+        socket.emit('logout', {
+            msg: '已在其它地方登录',
+        });
+        socket.disconnect(true);
+    }
+};
 io.on('connection', (socket) => {
-    clientCount += 1;
     const uuid = decryptToken(socket.handshake.auth.token);
-    socket.uuid = uuid;
-    if (!socket.uuid) {
+    if (!uuid) {
         sendMessage(socket, '你还未登录', robot);
     } else {
         const filter = getUserByUuid(uuid);
         if (filter.length > 0) {
+            if (socketMap[uuid]) {
+                logout(socketMap[uuid]);
+            }
             socket.uuid = filter[0].uuid;
             socket.nickname = filter[0].nickname;
             socket.username = filter[0].username;
@@ -115,7 +122,7 @@ io.on('connection', (socket) => {
                 }
             });
         } else {
-            sendMessage(socket, '无效token', robot);
+            sendMessage(socket, '用户不存在', robot);
         }
     }
     socket.on('message', (encryptData) => {
@@ -150,6 +157,7 @@ io.on('connection', (socket) => {
                                 robot
                             );
                         } else {
+                            logout(socketMap[socket.uuid]);
                             socket.uuid = filter[0].uuid;
                             socket.nickname = filter[0].nickname;
                             socket.username = filter[0].username;
@@ -189,8 +197,6 @@ io.on('connection', (socket) => {
                     users.forEach((item) => {
                         sendMessage(socketMap[item], data.msg, form[0]);
                     });
-                    socket.encrypt = socket.handshake.query.encrypt || uuidv4();
-                    socket.clientNum = clientCount;
                 }
             }
         } catch (e) {
@@ -205,6 +211,7 @@ io.on('connection', (socket) => {
         const users = Object.keys(socketMap);
         if (form.length > 0) {
             if (socketMap[socket.uuid]) {
+                socketMap[socket.uuid].disconnect(true);
                 delete socketMap[socket.uuid];
                 users.forEach((item) => {
                     if (socketMap[item]) {
@@ -218,7 +225,6 @@ io.on('connection', (socket) => {
                 });
             }
         }
-        clientCount -= 1;
     });
 });
 console.log('websocket listening on port ' + PORT);

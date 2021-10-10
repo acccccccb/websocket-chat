@@ -18,7 +18,7 @@ encrypt.setPublicKey(pubKey); // 设置公钥
 encrypt.setPrivateKey(privateKeyToken); // 设置私钥
 decrypt.setPrivateKey(privateKey); // 设置私钥
 
-exports.encryptData = (JSONobj, len = 64) => {
+exports.encryptData = (JSONobj, len = 32) => {
     const str = JSON.stringify(JSONobj);
     const result = [];
     const splitCount = Math.ceil(str.length / len);
