@@ -197,7 +197,7 @@
                 message: [],
                 onLineList: [],
                 onLineCount: 0,
-                send: 'admin@123',
+                send: '',
                 nicknameEditDisabled: false,
                 userInfo: {
                     level: '',
