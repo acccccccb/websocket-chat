@@ -5,12 +5,17 @@ const privateKey = fs
     .readFileSync(path.resolve(__dirname, '../cert/rsa_private_key.pem'))
     .toString();
 
+const privateKeyToken = fs
+    .readFileSync(path.resolve(__dirname, '../cert/rsa_1024_priv.pem'))
+    .toString();
+
 const pubKey = fs
     .readFileSync(path.resolve(__dirname, '../cert/rsa_1024_pub.pem'))
     .toString();
 const encrypt = new JSEncrypt();
 const decrypt = new JSEncrypt();
 encrypt.setPublicKey(pubKey); // 设置公钥
+encrypt.setPrivateKey(privateKeyToken); // 设置私钥
 decrypt.setPrivateKey(privateKey); // 设置私钥
 
 exports.encryptData = (JSONobj, len = 64) => {
@@ -34,4 +39,16 @@ exports.decryptData = (encryptArr) => {
         return decyptStr ? decyptStr : '';
     });
     return data.join('');
+};
+
+exports.encryptToken = (uuid) => {
+    return encrypt.encrypt(`${uuid}_${new Date().valueOf()}`);
+};
+exports.decryptToken = (token) => {
+    if (!token) {
+        return '';
+    }
+    const decryptStr = encrypt.decrypt(token);
+    const uuid = decryptStr ? decryptStr.split('_')[0] : '';
+    return uuid;
 };

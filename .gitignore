@@ -1,8 +1,8 @@
 .DS_Store
 node_modules
 /dist
-/src/serve/cert
-/src/serve/dataBase
+/src/serve/cert/*.pem
+/src/serve/dataBase/*.json
 
 # local env files
 .env.local

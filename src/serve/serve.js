@@ -3,7 +3,12 @@ const io = require('socket.io')(app);
 const moment = require('moment');
 const uuidv4 = require('uuid').v4;
 const fs = require('fs-extra');
-const { encryptData, decryptData } = require('./utils/util');
+const {
+    encryptData,
+    decryptData,
+    encryptToken,
+    decryptToken,
+} = require('./utils/util');
 const path = require('path');
 
 const PORT = 3000;
@@ -71,8 +76,47 @@ const updateOnlineList = (socket) => {
 };
 io.on('connection', (socket) => {
     clientCount += 1;
+    const uuid = decryptToken(socket.handshake.auth.token);
+    socket.uuid = uuid;
     if (!socket.uuid) {
         sendMessage(socket, '你还未登录', robot);
+    } else {
+        const filter = getUserByUuid(uuid);
+        if (filter.length > 0) {
+            socket.uuid = filter[0].uuid;
+            socket.nickname = filter[0].nickname;
+            socket.username = filter[0].username;
+            socket.avatar = filter[0].avatar;
+            socket.level = filter[0].level;
+            socketMap[socket.uuid] = socket;
+            sendMessage(
+                socket,
+                `${socket.nickname} 欢迎回来`,
+                robot,
+                {
+                    uuid: filter[0].uuid,
+                    nickname: filter[0].nickname,
+                    username: filter[0].username,
+                    avatar: filter[0].avatar,
+                    level: filter[0].level,
+                    token: encryptToken(filter[0].uuid),
+                },
+                'loginIn'
+            );
+            const users = Object.keys(socketMap);
+            users.forEach((item) => {
+                updateOnlineList(socketMap[item]);
+                if (item !== socket.uuid) {
+                    sendMessage(
+                        socketMap[item],
+                        `${socket.nickname} 来了`,
+                        robot
+                    );
+                }
+            });
+        } else {
+            sendMessage(socket, '无效token', robot);
+        }
     }
     socket.on('message', (encryptData) => {
         if (!encryptData.encrypt || typeof encryptData.encrypt !== 'object') {
@@ -122,6 +166,7 @@ io.on('connection', (socket) => {
                                     username: filter[0].username,
                                     avatar: filter[0].avatar,
                                     level: filter[0].level,
+                                    token: encryptToken(filter[0].uuid),
                                 },
                                 'loginIn'
                             );
@@ -159,17 +204,19 @@ io.on('connection', (socket) => {
         const form = getUserByUuid(socket.uuid);
         const users = Object.keys(socketMap);
         if (form.length > 0) {
-            delete socketMap[socket.uuid];
-            users.forEach((item) => {
-                if (socketMap[item]) {
-                    sendMessage(
-                        socketMap[item],
-                        `${form[0].nickname} 走了`,
-                        robot
-                    );
-                    updateOnlineList(socketMap[item]);
-                }
-            });
+            if (socketMap[socket.uuid]) {
+                delete socketMap[socket.uuid];
+                users.forEach((item) => {
+                    if (socketMap[item]) {
+                        sendMessage(
+                            socketMap[item],
+                            `${form[0].nickname} 走了`,
+                            robot
+                        );
+                        updateOnlineList(socketMap[item]);
+                    }
+                });
+            }
         }
         clientCount -= 1;
     });

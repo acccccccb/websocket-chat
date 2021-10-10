@@ -1,6 +1,23 @@
 <template>
-    <a-spin :spinning="!onLine" tip="Connect...">
-        <a-icon slot="indicator" type="loading" style="font-size: 24px" spin />
+    <a-spin :spinning="!onLine" :tip="loadingText">
+        <template slot="indicator">
+            <a-icon
+                v-if="onlineStatus === 'loading'"
+                type="loading"
+                style="font-size: 24px"
+                spin
+            />
+            <a-icon
+                v-if="onlineStatus === 'offline'"
+                type="api"
+                style="font-size: 24px"
+            />
+            <a-icon
+                v-if="onlineStatus === 'error'"
+                type="warning"
+                style="font-size: 24px"
+            />
+        </template>
         <a-card
             id="chatListBody"
             class="home"
@@ -104,6 +121,14 @@
             >
                 <template slot="title">
                     当前在线 {{ onLineCount }} 人
+                    <a-button
+                        @click="logOut"
+                        style="float:right;"
+                        size="small"
+                        type="danger"
+                    >
+                        退出
+                    </a-button>
                 </template>
                 <a-empty
                     v-if="onLineList.length === 0"
@@ -191,13 +216,15 @@
                 innerHeight: 0,
                 clientHeight: 0,
                 onLine: true,
+                loadingText: 'Connect...',
+                onlineStatus: '',
                 ps: null,
                 socket: null,
                 userListVisible: false,
                 message: [],
                 onLineList: [],
                 onLineCount: 0,
-                send: '',
+                send: 'admin@123456',
                 nicknameEditDisabled: false,
                 userInfo: {
                     level: '',
@@ -205,13 +232,15 @@
                     nickname: '',
                     uuid: '',
                     avatar: '',
+                    token: '',
                 },
             };
         },
         created() {
-            this.connect();
+            this.userInfo.token = localStorage.getItem('token');
         },
         mounted() {
+            this.connect();
             window.onresize = () => {
                 this.listenTypeEvent();
             };
@@ -249,14 +278,41 @@
                 });
             },
             connect() {
+                const token = this.userInfo.token;
+                this.onLine = false;
+                this.onlineStatus = 'loading';
+                this.loadingText = '正在连接';
                 this.socket = io(process.env.VUE_APP_BASE_URL, {
                     transports: ['websocket'],
                     autoConnect: false,
                     rememberUpgrade: true,
+                    auth: {
+                        token,
+                    },
                 });
-                this.socket.connect();
+                this.socket.on('connect', () => {
+                    this.onLine = true;
+                    this.loadingText = '连接成功';
+                });
+                this.socket.io.on('reconnect', () => {
+                    this.onLine = true;
+                    this.loadingText = '连接成功';
+                });
+                this.socket.io.on('error', () => {
+                    this.onLine = false;
+                    this.loadingText = '与服务器的连接已断开';
+                });
+                this.socket.io.on('reconnect_attempt', () => {
+                    this.loadingText = '正在重连';
+                });
+                this.socket.io.on('reconnect_error', () => {
+                    this.loadingText = '重新连接失败';
+                    this.onlineStatus = 'error';
+                    this.socket.close();
+                });
                 this.socket.on('loginIn', (res) => {
                     this.userInfo = this.decryptData(res.encrypt).data;
+                    localStorage.setItem('token', this.userInfo.token);
                     this.message.push(this.decryptData(res.encrypt));
                     this.ps.update();
                 });
@@ -272,6 +328,7 @@
                     this.onLineList = result.userList;
                     this.onLineCount = result.count;
                 });
+                this.socket.connect();
             },
             encryptData(data, len = 64) {
                 const str = JSON.stringify(data);
@@ -327,6 +384,26 @@
                     onOk: () => {
                         this.message = [];
                         this.$message.success('已清空聊天记录');
+                    },
+                });
+            },
+            logOut() {
+                this.$confirm({
+                    title: '确定要退出登陆吗',
+                    okText: '退出',
+                    cancelText: '取消',
+                    iconType: 'warning',
+                    onOk: () => {
+                        localStorage.removeItem('token');
+                        this.onLine = false;
+                        this.onlineStatus = 'offline';
+                        this.loadingText = '已退出';
+                        this.message = [];
+                        this.onLineList = [];
+                        this.onLineCount = 0;
+                        this.userListVisible = false;
+                        this.socket.close();
+                        this.$message.success('已退出登录');
                     },
                 });
             },
