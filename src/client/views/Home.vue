@@ -224,7 +224,7 @@
                 message: [],
                 onLineList: [],
                 onLineCount: 0,
-                send: 'admin@123456',
+                send: '',
                 nicknameEditDisabled: false,
                 userInfo: {
                     level: '',
