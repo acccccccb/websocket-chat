@@ -437,6 +437,8 @@
         max-width: 1000px;
         margin: auto;
         background: #f9f9f9;
+        left: 50%;
+        transform: translateX(-50%);
     }
     .chat-time {
         opacity: 0.45;
@@ -464,7 +466,8 @@
     ::v-deep .ant-card-head {
         position: fixed;
         top: 0;
-        left: 0;
+        left: 50%;
+        transform: translateX(-50%);
         width: 100%;
         max-width: 1000px;
         margin: auto;
