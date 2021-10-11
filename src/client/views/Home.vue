@@ -26,7 +26,7 @@
                 padding: '0',
             }"
         >
-            <template slot="title"> Chat（{{ onLineCount }}）</template>
+            <template slot="title"> 大厅（{{ onLineCount }}）</template>
             <template slot="extra">
                 <a-button
                     style="margin-right: 10px;"
@@ -50,67 +50,143 @@
                     height: innerHeight - 73 - 48 + 'px',
                 }"
             >
-                <a-list item-layout="horizontal" :data-source="message">
-                    <a-list-item slot="renderItem" slot-scope="item, index">
-                        <a-comment :datetime="moment(item.time).fromNow()">
-                            <template slot="author">
-                                <span v-if="item.from.level === 0">
-                                    <strong style="color: #ff4d4f;">
-                                        {{ item.from.nickname }}
-                                    </strong>
-                                </span>
-                                <span v-else>{{ item.from.nickname }}</span>
-                            </template>
-                            <template slot="avatar">
-                                <a-badge
-                                    v-if="item.from.level === 0"
-                                    :offset="[-3, 3]"
-                                >
-                                    <a-icon
-                                        slot="count"
-                                        type="sketch-circle"
-                                        theme="filled"
-                                        style="color: #108ee9;background:#fff;border-radius: 50%;"
-                                    />
+                <div class="message-box">
+                    <div v-for="item in message">
+                        <template v-if="item.type === 'message'">
+                            <div
+                                v-if="item.from.uuid !== userInfo.uuid"
+                                class="message-list"
+                            >
+                                <div class="message-avatar">
+                                    <a-badge
+                                        v-if="item.from.level === 0"
+                                        :offset="[-3, 3]"
+                                    >
+                                        <a-icon
+                                            slot="count"
+                                            type="sketch-circle"
+                                            theme="filled"
+                                            style="color: #108ee9;background:#fff;border-radius: 50%;"
+                                        />
+                                        <a-avatar
+                                            shape="square"
+                                            icon="robot"
+                                            :style="{
+                                                background: stc(
+                                                    item.from.nickname
+                                                ),
+                                            }"
+                                        ></a-avatar>
+                                    </a-badge>
                                     <a-avatar
                                         shape="square"
-                                        icon="robot"
-                                        style="background: #ff4d4f"
-                                    ></a-avatar>
-                                </a-badge>
-                                <a-avatar
-                                    shape="square"
-                                    v-else
-                                    :style="{
-                                        background: stc(item.from.nickname),
-                                    }"
-                                >
-                                    {{ item.from.nickname.substring(0, 2) }}
-                                </a-avatar>
-                            </template>
-                            <div slot="content">
-                                <div
-                                    v-if="item.from.level === 0"
-                                    class="message-content serve-message"
-                                >
-                                    {{ item.msg }}
+                                        v-else
+                                        :style="{
+                                            background: stc(item.from.nickname),
+                                        }"
+                                    >
+                                        {{ item.from.nickname.substring(0, 2) }}
+                                    </a-avatar>
                                 </div>
-                                <div
-                                    v-else-if="item.from.uuid === userInfo.uuid"
-                                    class="message-content my-message"
-                                >
-                                    {{ item.msg }}
-                                </div>
-                                <div
-                                    v-else
-                                    class="message-content other-message"
-                                >
-                                    {{ item.msg }}
+                                <div>
+                                    <div class="message-info">
+                                        <span
+                                            class="message-nickname"
+                                            :class="
+                                                item.from.level === 0
+                                                    ? 'message-nickname-admin'
+                                                    : 'message-nickname-user'
+                                            "
+                                        >
+                                            {{ item.from.nickname }}
+                                        </span>
+                                        <span class="message-time">{{
+                                            moment(item.time).fromNow()
+                                        }}</span>
+                                    </div>
+                                    <template>
+                                        <div
+                                            v-if="item.from.level === 0"
+                                            class="message-content serve-message"
+                                            v-html="item.msg"
+                                        ></div>
+                                        <div
+                                            v-else-if="
+                                                item.from.uuid === userInfo.uuid
+                                            "
+                                            class="message-content my-message"
+                                        >
+                                            {{ item.msg }}
+                                        </div>
+                                        <div
+                                            v-else
+                                            class="message-content other-message"
+                                        >
+                                            {{ item.msg }}
+                                        </div>
+                                    </template>
                                 </div>
                             </div>
-                        </a-comment>
-                    </a-list-item>
-                </a-list>
+                            <div v-else class="message-list-self">
+                                <template>
+                                    <div
+                                        v-if="item.from.level === 0"
+                                        class="message-content serve-message"
+                                        v-html="item.msg"
+                                    ></div>
+                                    <div
+                                        v-else-if="
+                                            item.from.uuid === userInfo.uuid
+                                        "
+                                        class="message-content my-message"
+                                    >
+                                        {{ item.msg }}
+                                    </div>
+                                    <div
+                                        v-else
+                                        class="message-content other-message"
+                                    >
+                                        {{ item.msg }}
+                                    </div>
+                                </template>
+                                <div class="message-avatar message-avatar-self">
+                                    <a-badge
+                                        v-if="item.from.level === 0"
+                                        :offset="[-3, 3]"
+                                    >
+                                        <a-icon
+                                            slot="count"
+                                            type="sketch-circle"
+                                            theme="filled"
+                                            style="color: #108ee9;background:#fff;border-radius: 50%;"
+                                        />
+                                        <a-avatar
+                                            shape="square"
+                                            icon="robot"
+                                            :style="{
+                                                background: stc(
+                                                    item.from.nickname
+                                                ),
+                                            }"
+                                        ></a-avatar>
+                                    </a-badge>
+                                    <a-avatar
+                                        shape="square"
+                                        v-else
+                                        :style="{
+                                            background: stc(item.from.nickname),
+                                        }"
+                                    >
+                                        {{ item.from.nickname.substring(0, 2) }}
+                                    </a-avatar>
+                                </div>
+                            </div>
+                        </template>
+                        <template v-if="item.type === 'notice'">
+                            <div class="notice" v-html="item.msg"></div>
+                        </template>
+                    </div>
+                </div>
             </div>
 
             <a-drawer
@@ -238,6 +314,8 @@
         },
         created() {
             this.userInfo.token = localStorage.getItem('token');
+            const messageStr = localStorage.getItem('message');
+            this.message = messageStr ? JSON.parse(messageStr) : [];
         },
         mounted() {
             this.connect();
@@ -320,7 +398,8 @@
                 this.socket.on('loginIn', (res) => {
                     this.userInfo = this.decryptData(res.encrypt).data;
                     localStorage.setItem('token', this.userInfo.token);
-                    this.message.push(this.decryptData(res.encrypt));
+                    this.$message.success(this.decryptData(res.encrypt).msg);
+                    // this.message.push(this.decryptData(res.encrypt));
                     this.ps.update();
                 });
                 this.socket.on('message', (res) => {
@@ -368,8 +447,12 @@
                 $el.scrollTop = $el.scrollHeight;
             },
             sendMessage() {
-                if (!this.send) {
+                if (!this.send || !this.send.trim()) {
                     this.$message.warning('发送内容不能为空');
+                    return false;
+                }
+                if (this.send.length > 500) {
+                    this.$message.warning('内容过多，超出500字');
                     return false;
                 }
                 const obj = {
@@ -402,6 +485,7 @@
                     icon: 'warning',
                     onOk: () => {
                         localStorage.removeItem('token');
+                        this.socket.emit('logout');
                         this.onLine = false;
                         this.onlineStatus = 'offline';
                         this.loadingText = '已退出';
@@ -413,6 +497,11 @@
                         this.$message.success('已退出登录');
                     },
                 });
+            },
+        },
+        watch: {
+            message(val) {
+                localStorage.setItem('message', JSON.stringify(val));
             },
         },
     };
@@ -454,7 +543,7 @@
     }
     .message-content {
         line-height: 160%;
-        padding: 12px 8px;
+        padding: 8px 8px;
         border-radius: 6px;
     }
     .my-message {
@@ -468,7 +557,6 @@
     .serve-message {
         background: #ffe3db;
         color: #ff4d4f;
-        font-style: italic;
     }
     ::v-deep .ant-card-head {
         position: fixed;
@@ -497,5 +585,61 @@
     ::v-deep .ant-card-head-title,
     ::v-deep .ant-card-extra {
         padding: 8px 0;
+    }
+    .message-box {
+        .notice {
+            min-height: 22px;
+            line-height: 22px;
+            margin: 10px auto;
+            text-align: center;
+            background: aliceblue;
+            border-radius: 11px;
+            display: block;
+            width: 200px;
+            color: #949494;
+        }
+        .message-list-self {
+            display: flex;
+            justify-content: end;
+            padding-top: 12px;
+            padding-bottom: 12px;
+        }
+        .message-list {
+            display: flex;
+            padding-top: 12px;
+            padding-bottom: 12px;
+        }
+        .message-avatar {
+            margin-right: 10px;
+        }
+        .message-avatar-self {
+            margin-left: 10px;
+        }
+        .message-info {
+            margin-bottom: 5px;
+        }
+        .message-nickname {
+            padding-right: 8px;
+            font-size: 12px;
+            line-height: 18px;
+        }
+        .message-nickname-admin {
+            font-weight: bold;
+            color: #ff4d4f;
+        }
+        .message-nickname-user {
+            color: rgba(0, 0, 0, 0.45);
+        }
+        .message-time {
+            padding-right: 8px;
+            font-size: 12px;
+            line-height: 18px;
+            color: #ccc;
+            white-space: nowrap;
+            cursor: auto;
+        }
+        .message-content {
+            word-break: break-all;
+        }
     }
 </style>
