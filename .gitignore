@@ -3,7 +3,7 @@ node_modules
 /dist
 /src/serve/cert/*.pem
 /src/serve/dataBase/*.json
-
+ecosystem.config.js
 # local env files
 .env.local
 .env.*.local

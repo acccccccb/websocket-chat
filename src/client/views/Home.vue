@@ -149,7 +149,7 @@
                                         {{ item.msg }}
                                     </div>
                                 </template>
-                                <div class="message-avatar message-avatar-self">
+                                <div class="message-avatar-self">
                                     <a-badge
                                         v-if="item.from.level === 0"
                                         :offset="[-3, 3]"
@@ -261,7 +261,28 @@
                 @focus="listenTypeEvent"
                 @blur="listenTypeEvent"
             >
-                <a-button slot="enterButton" type="primary">
+                <span slot="addonBefore">
+                    <a-popover trigger="click" placement="topLeft">
+                        <template slot="content">
+                            <Picker
+                                set="apple"
+                                :i18n="i18n"
+                                :data="emojiIndex"
+                                :height="200"
+                                :showCategories="true"
+                                :showSkinTones="false"
+                                :showSearch="false"
+                                :showPreview="false"
+                                @select="addEmoji"
+                            />
+                        </template>
+                        <a-icon
+                            type="smile"
+                            style="font-size: 16px; opacity: .4"
+                        ></a-icon>
+                    </a-popover>
+                </span>
+                <a-button slot="enterButton" type="primary" :disabled="!send">
                     发送
                 </a-button>
             </a-input-search>
@@ -270,6 +291,10 @@
 </template>
 
 <script>
+    import data from 'emoji-mart-vue-fast/data/apple.json';
+    import 'emoji-mart-vue-fast/css/emoji-mart.css';
+    import { Picker, EmojiIndex } from 'emoji-mart-vue-fast';
+    let emojiIndex = new EmojiIndex(data);
     import stc from 'string-to-color';
     import PerfectScrollbar from 'perfect-scrollbar';
     import { v4 as uuidv4 } from 'uuid';
@@ -286,8 +311,30 @@
     decrypt.setPrivateKey(privateKey); // 设置私钥
     export default {
         name: 'Home',
+        components: {
+            Picker,
+        },
         data() {
             return {
+                emojiIndex: emojiIndex,
+                i18n: {
+                    search: '搜索',
+                    notfound: '无结果',
+                    categories: {
+                        search: '搜索结果',
+                        recent: '常用',
+                        smileys: '表情和手势',
+                        people: '人物',
+                        nature: '动物和自然',
+                        foods: '食物',
+                        activity: '活动',
+                        places: '旅行和地点',
+                        objects: '物品',
+                        symbols: '符合',
+                        flags: '旗帜',
+                        custom: '自定义',
+                    },
+                },
                 resizeTimmer: null,
                 innerHeight: 0,
                 clientHeight: 0,
@@ -498,6 +545,10 @@
                     },
                 });
             },
+            addEmoji(e) {
+                console.log(e);
+                this.send += e.native;
+            },
         },
         watch: {
             message(val) {
@@ -511,7 +562,7 @@
     .home {
         width: 100%;
         height: 100%;
-        max-width: 1000px;
+        /*max-width: 1000px;*/
         margin: auto auto;
         padding-top: 50px;
     }
@@ -530,7 +581,7 @@
         /*bottom: 0;*/
         width: 100%;
         height: 73px;
-        max-width: 1000px;
+        /*max-width: 1000px;*/
         margin: auto;
         background: #f9f9f9;
         left: 50%;
@@ -564,7 +615,7 @@
         left: 50%;
         transform: translateX(-50%);
         width: 100%;
-        max-width: 1000px;
+        /*max-width: 1000px;*/
         margin: auto;
         z-index: 999;
     }
@@ -641,5 +692,9 @@
         .message-content {
             word-break: break-all;
         }
+    }
+    ::v-deep .emoji-mart-category-label {
+        font-size: 12px;
+        opacity: 0.45;
     }
 </style>
