@@ -17,6 +17,15 @@ const roomList = {
     hall: 'hall',
 };
 
+// 机器人
+const robot = {
+    uuid: 'serve',
+    nickname: '聊天机器人',
+    username: 'Robot',
+    avatar: 'images/robot.jpg',
+    level: 0,
+};
+
 const userDataFile = 'dataBase/users.json';
 // 获取用户表
 const getUserList = () => {
@@ -28,7 +37,6 @@ const findUserByUuid = (uuid) => {
         return item.uuid === uuid;
     });
 };
-const robot = findUserByUuid('serve');
 
 //存储客户端socket
 let socketMap = {};
@@ -123,6 +131,7 @@ io.on('connection', (socket) => {
             '' +
                 '你还未登录<br />' +
                 '输入 用户名@密码 登录<br />' +
+                '或点击右上角登录按钮<br />' +
                 '项目地址：<br />' +
                 '<a href="https://github.com/acccccccb/websocket-chat" target="_blank">https://github.com/acccccccb/websocket-chat</a>' +
                 '',

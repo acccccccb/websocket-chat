@@ -26,20 +26,27 @@
                 padding: '0',
             }"
         >
-            <template slot="title"> 大厅（{{ onLineCount }}）</template>
+            <template slot="title"> 大厅（{{ onLineCount }}） </template>
             <template slot="extra">
                 <a-button
-                    style="margin-right: 10px;"
+                    style="margin-right: 10px"
                     type="default"
                     :disabled="message.length === 0"
                     @click="clearMessage"
                     icon="delete"
                 />
                 <a-button
+                    v-if="userInfo.uuid"
                     type="default"
                     :disabled="!userInfo.uuid"
                     @click="userListVisible = !userListVisible"
                     icon="team"
+                />
+                <a-button
+                    v-else
+                    type="default"
+                    @click="showLoginModal"
+                    icon="login"
                 />
             </template>
 
@@ -66,7 +73,11 @@
                                             slot="count"
                                             type="sketch-circle"
                                             theme="filled"
-                                            style="color: #108ee9;background:#fff;border-radius: 50%;"
+                                            style="
+                                                color: #108ee9;
+                                                background: #fff;
+                                                border-radius: 50%;
+                                            "
                                         />
                                         <a-avatar
                                             shape="square"
@@ -107,7 +118,10 @@
                                     <template>
                                         <div
                                             v-if="item.from.level === 0"
-                                            class="message-content serve-message"
+                                            class="
+                                                message-content
+                                                serve-message
+                                            "
                                             v-html="item.msg"
                                         ></div>
                                         <div
@@ -120,7 +134,10 @@
                                         </div>
                                         <div
                                             v-else
-                                            class="message-content other-message"
+                                            class="
+                                                message-content
+                                                other-message
+                                            "
                                         >
                                             {{ item.msg }}
                                         </div>
@@ -158,17 +175,27 @@
                                             slot="count"
                                             type="sketch-circle"
                                             theme="filled"
-                                            style="color: #108ee9;background:#fff;border-radius: 50%;"
+                                            style="
+                                                color: #108ee9;
+                                                background: #fff;
+                                                border-radius: 50%;
+                                            "
                                         />
                                         <a-avatar
                                             shape="square"
-                                            icon="robot"
                                             :style="{
                                                 background: stc(
                                                     item.from.nickname
                                                 ),
                                             }"
-                                        ></a-avatar>
+                                        >
+                                            {{
+                                                item.from.nickname.substring(
+                                                    0,
+                                                    2
+                                                )
+                                            }}
+                                        </a-avatar>
                                     </a-badge>
                                     <a-avatar
                                         shape="square"
@@ -199,51 +226,61 @@
                     当前在线 {{ onLineCount }} 人
                     <a-button
                         @click="logOut"
-                        style="float:right;"
+                        style="float: right"
                         size="small"
                         type="danger"
                     >
                         退出
                     </a-button>
                 </template>
-                <a-empty
-                    v-if="onLineList.length === 0"
-                    description="无人在线"
-                ></a-empty>
-                <template v-else>
-                    <p v-for="item in onLineList">
-                        <a-badge v-if="item.level === 0" :offset="[-3, 3]">
-                            <a-icon
-                                slot="count"
-                                type="sketch-circle"
-                                theme="filled"
-                                style="color: #108ee9;background:#fff;border-radius: 50%;"
-                            />
-                            <a-avatar
-                                shape="square"
-                                :size="32"
-                                :style="{
-                                    background: stc(item.nickname),
-                                }"
-                            >
-                                {{ item.nickname.substring(0, 2) }}
-                            </a-avatar>
-                        </a-badge>
-                        <a-badge v-else dot color="green">
-                            <a-avatar
-                                shape="square"
-                                :size="32"
-                                :style="{
-                                    background: stc(item.nickname),
-                                }"
-                            >
-                                {{ item.nickname.substring(0, 2) }}
-                            </a-avatar>
-                        </a-badge>
+                <div class="user-list-box">
+                    <a-empty
+                        v-if="onLineList.length === 0"
+                        description="无人在线"
+                    ></a-empty>
+                    <template v-else>
+                        <p v-for="item in onLineList">
+                            <a-badge v-if="item.level === 0" :offset="[-3, 3]">
+                                <a-icon
+                                    slot="count"
+                                    type="sketch-circle"
+                                    theme="filled"
+                                    style="
+                                        color: #108ee9;
+                                        background: #fff;
+                                        border-radius: 50%;
+                                    "
+                                />
+                                <a-avatar
+                                    shape="square"
+                                    :size="32"
+                                    :style="{
+                                        background: stc(item.nickname),
+                                    }"
+                                >
+                                    {{ item.nickname.substring(0, 2) }}
+                                </a-avatar>
+                            </a-badge>
+                            <a-badge v-else dot color="green">
+                                <a-avatar
+                                    shape="square"
+                                    :size="32"
+                                    :style="{
+                                        background: stc(item.nickname),
+                                    }"
+                                >
+                                    {{ item.nickname.substring(0, 2) }}
+                                </a-avatar>
+                            </a-badge>
 
-                        {{ item.nickname }}
-                    </p>
-                </template>
+                            {{ item.nickname }}
+                        </p>
+                    </template>
+                </div>
+                <div class="user-list-option">
+                    保存聊天记录
+                    <a-switch v-model="saveChat" />
+                </div>
             </a-drawer>
         </a-card>
         <div
@@ -278,7 +315,7 @@
                         </template>
                         <a-icon
                             type="smile"
-                            style="font-size: 16px; opacity: .4"
+                            style="font-size: 16px; opacity: 0.4"
                         ></a-icon>
                     </a-popover>
                 </span>
@@ -287,6 +324,7 @@
                 </a-button>
             </a-input-search>
         </div>
+        <LoginModal ref="loginModalRef" @login="submitLogin"></LoginModal>
     </a-spin>
 </template>
 
@@ -298,24 +336,21 @@
     import stc from 'string-to-color';
     import PerfectScrollbar from 'perfect-scrollbar';
     import { v4 as uuidv4 } from 'uuid';
-    import { io } from 'socket.io-client';
     import moment from 'moment';
-    import JSEncrypt from 'jsencrypt';
-    const encrypt = new JSEncrypt(); // 创建加密对象实例
-    const decrypt = new JSEncrypt(); // 创建加密对象实例
-    // rsa_public_key
-    const pubKey = process.env.VUE_APP_PUB_KEY;
-    // rsa_1024_priv
-    const privateKey = process.env.VUE_APP_PRV_KEY.replace(/\\n/g, '\n');
-    encrypt.setPublicKey(pubKey); //设置公钥
-    decrypt.setPrivateKey(privateKey); // 设置私钥
+
+    import { encryptData, decryptData } from '@/client/utils/crypt';
+    import LoginModal from '@/client/components/home/LoginModal';
+
+    const socket = window.socket;
     export default {
         name: 'Home',
         components: {
             Picker,
+            LoginModal,
         },
         data() {
             return {
+                saveChat: false,
                 emojiIndex: emojiIndex,
                 i18n: {
                     search: '搜索',
@@ -342,7 +377,6 @@
                 loadingText: 'Connect...',
                 onlineStatus: '',
                 ps: null,
-                socket: null,
                 userListVisible: false,
                 message: [],
                 onLineList: [],
@@ -360,12 +394,18 @@
             };
         },
         created() {
+            this.saveChat = this.getSaveChat();
             this.userInfo.token = localStorage.getItem('token');
-            const messageStr = localStorage.getItem('message');
-            this.message = messageStr ? JSON.parse(messageStr) : [];
+
+            if (this.saveChat) {
+                const messageStr = localStorage.getItem('message');
+                this.message = messageStr ? JSON.parse(messageStr) : [];
+            } else {
+                localStorage.removeItem('message');
+            }
         },
         mounted() {
-            this.connect();
+            this.newConnect();
             window.onresize = () => {
                 this.listenTypeEvent();
             };
@@ -402,97 +442,76 @@
                     minScrollbarLength: 20,
                 });
             },
-            connect() {
-                const token = this.userInfo.token;
-                this.onLine = false;
-                this.onlineStatus = 'loading';
-                this.loadingText = '正在连接';
-                this.socket = io(process.env.VUE_APP_BASE_URL, {
-                    transports: ['websocket'],
-                    autoConnect: false,
-                    rememberUpgrade: true,
-                    auth: {
-                        token,
-                    },
-                });
-                this.socket.on('connect', () => {
+            getSaveChat() {
+                return localStorage.getItem('saveChat') === 'true';
+            },
+            newConnect() {
+                const socket = this.socket;
+                socket.on('connect', () => {
                     this.onLine = true;
                     this.loadingText = '连接成功';
                 });
-                this.socket.io.on('reconnect', () => {
+                socket.io.on('reconnect', () => {
                     this.onLine = true;
                     this.loadingText = '连接成功';
                 });
-                this.socket.on('logout', (res) => {
+                socket.on('logout', (res) => {
                     this.onLine = false;
                     this.onlineStatus = 'error';
                     this.loadingText = res.msg;
                     localStorage.removeItem('token');
-                    this.socket.close();
+                    socket.close();
                 });
-                this.socket.io.on('error', () => {
+                socket.io.on('error', () => {
                     this.onLine = false;
                     this.loadingText = '与服务器的连接已断开';
                 });
-                this.socket.io.on('reconnect_attempt', () => {
+                socket.io.on('reconnect_attempt', () => {
                     this.loadingText = '正在重连';
                 });
-                this.socket.io.on('reconnect_error', () => {
+                socket.io.on('reconnect_error', () => {
                     this.loadingText = '重新连接失败';
                     this.onlineStatus = 'error';
-                    this.socket.close();
+                    socket.close();
                 });
-                this.socket.on('loginIn', (res) => {
-                    this.userInfo = this.decryptData(res.encrypt).data;
+                socket.on('loginIn', (res) => {
+                    this.userInfo = decryptData(res.encrypt).data;
                     localStorage.setItem('token', this.userInfo.token);
-                    this.$message.success(this.decryptData(res.encrypt).msg);
-                    // this.message.push(this.decryptData(res.encrypt));
+                    this.$message.success(decryptData(res.encrypt).msg);
+                    // this.message.push(decryptData(res.encrypt));
+                    this.$refs.loginModalRef.close();
                     this.ps.update();
+                    this.saveChat = this.getSaveChat();
                 });
-                this.socket.on('message', (res) => {
-                    this.message.push(this.decryptData(res.encrypt));
+                socket.on('message', (res) => {
+                    this.message.push(decryptData(res.encrypt));
                     this.$nextTick(() => {
                         this.setChatList();
                         this.ps.update();
                     });
                 });
-                this.socket.on('onlineList', (res) => {
-                    const result = this.decryptData(res.encrypt);
+                socket.on('onlineList', (res) => {
+                    const result = decryptData(res.encrypt);
                     this.onLineList = result.userList;
                     this.onLineCount = result.count;
                 });
-                this.socket.connect();
+                socket.connect();
             },
-            encryptData(data, len = 32) {
-                const str = JSON.stringify(data);
-                const result = [];
-                const splitCount = Math.ceil(str.length / len);
-                for (let i = 0; i < splitCount; i++) {
-                    const start = i * len;
-                    const end =
-                        (i + 1) * len < str.length ? (i + 1) * len : str.length;
-                    const substr = str.substring(start, end);
-                    result.push(substr);
-                }
-                return result.map((item) => {
-                    return encrypt.encrypt(item);
+            submitLogin(res) {
+                const obj = {
+                    nickname: this.userInfo.nickname,
+                    msg: `${res.username}@${res.password}`,
+                    from: this.userInfo,
+                };
+                this.socket.emit('message', {
+                    encrypt: encryptData(obj),
                 });
-            },
-            decryptData(encryptArr) {
-                try {
-                    let data = encryptArr.map((item) => {
-                        const decyptStr = decrypt.decrypt(item);
-                        return decyptStr ? decyptStr : '';
-                    });
-                    return JSON.parse(data.join(''));
-                } catch (e) {
-                    return {};
-                }
             },
             setChatList() {
                 const $el = document.getElementById('chatList');
                 $el.scrollTop = $el.scrollHeight;
             },
+
             sendMessage() {
                 if (!this.send || !this.send.trim()) {
                     this.$message.warning('发送内容不能为空');
@@ -508,7 +527,7 @@
                     from: this.userInfo,
                 };
                 this.socket.emit('message', {
-                    encrypt: this.encryptData(obj),
+                    encrypt: encryptData(obj),
                 });
                 this.send = '';
             },
@@ -521,10 +540,12 @@
                     onOk: () => {
                         this.message = [];
                         this.$message.success('已清空聊天记录');
+                        localStorage.removeItem('message');
                     },
                 });
             },
             logOut() {
+                const socket = this.socket;
                 this.$confirm({
                     title: '确定要退出登陆吗',
                     okText: '退出',
@@ -532,7 +553,7 @@
                     icon: 'warning',
                     onOk: () => {
                         localStorage.removeItem('token');
-                        this.socket.emit('logout');
+                        socket.emit('logout');
                         this.onLine = false;
                         this.onlineStatus = 'offline';
                         this.loadingText = '已退出';
@@ -540,7 +561,7 @@
                         this.onLineList = [];
                         this.onLineCount = 0;
                         this.userListVisible = false;
-                        this.socket.close();
+                        socket.close();
                         this.$message.success('已退出登录');
                     },
                 });
@@ -549,10 +570,22 @@
                 console.log(e);
                 this.send += e.native;
             },
+            // 登录
+            showLoginModal() {
+                this.$refs.loginModalRef.show();
+            },
+            switchOnChange(val) {
+                this.saveChat = val;
+            },
         },
         watch: {
             message(val) {
-                localStorage.setItem('message', JSON.stringify(val));
+                if (this.saveChat) {
+                    localStorage.setItem('message', JSON.stringify(val));
+                }
+            },
+            saveChat(saveChat) {
+                localStorage.setItem('saveChat', saveChat);
             },
         },
     };
@@ -696,5 +729,15 @@
     ::v-deep .emoji-mart-category-label {
         font-size: 12px;
         opacity: 0.45;
+    }
+    .user-list-box {
+        overflow: hidden;
+        height: calc(100vh - 148px);
+        padding: 5px 0;
+        overflow-y: scroll;
+    }
+    .user-list-option {
+        text-align: right;
+        padding: 20px 0 0 0;
     }
 </style>

@@ -1,0 +1,11 @@
+[
+
+    {
+        "uuid": "ed4d2110-9a70-40a8-be41-7eb65c2c0636",
+        "nickname": "西瓜",
+        "username": "admin",
+        "avatar": "images/user.jpg",
+        "password": "123",
+        "level": 1
+    }
+]
