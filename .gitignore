@@ -3,6 +3,7 @@ node_modules
 /dist
 /src/serve/cert/*.pem
 /src/serve/dataBase/*.json
+/src/serve/log/*.log
 ecosystem.config.js
 # local env files
 .env.local

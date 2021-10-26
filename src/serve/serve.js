@@ -1,7 +1,6 @@
 const app = require('http').createServer();
 const io = require('socket.io')(app);
 const moment = require('moment');
-const uuidv4 = require('uuid').v4;
 const fs = require('fs-extra');
 const {
     encryptData,
@@ -42,6 +41,16 @@ const findUserByUuid = (uuid) => {
 let socketMap = {};
 
 app.listen(PORT);
+// 记录日志
+
+const saveLog = (log) => {
+    const logFile = `log/${moment().format('YYYY-MM-DD')}.log`;
+    fs.appendFile(
+        path.resolve(__dirname, logFile),
+        `${moment().format('YYYY-MM-DD HH:mm:ss')} - ${log} \r\n`
+    );
+};
+
 // 发送消息
 const sendMessage = (socket, msg, from, data = {}, type = 'message') => {
     if (!socket) {
@@ -205,6 +214,9 @@ io.on('connection', (socket) => {
                                 `用户名或密码错误：${username}@${password}`,
                                 robot
                             );
+                            saveLog(
+                                `用户名或密码错误：${username}@${password}`
+                            );
                         } else {
                             logout(socketMap[socket.uuid]);
                             socket.uuid = filter.uuid;
@@ -234,10 +246,16 @@ io.on('connection', (socket) => {
                                 robot
                             );
                             updateOnlineList(roomList.hall);
+                            saveLog(`${socket.nickname} 登陆成功`);
                         }
                     }
                 } else {
                     const from = findUserByUuid(socket.uuid);
+
+                    const log = `${from.nickname || '未知'}(${
+                        from.username || '未知'
+                    }): ${data.msg}`;
+                    saveLog(log);
                     sendMessageAll(roomList.hall, data.msg, from);
                 }
             }
@@ -256,6 +274,8 @@ io.on('connection', (socket) => {
             delete socketMap[socket.uuid];
             sendNoticeAll(roomList.hall, `${from.nickname} 走了`, robot);
             updateOnlineList(roomList.hall);
+
+            saveLog(`${from.nickname} 走了`);
         }
     });
 });

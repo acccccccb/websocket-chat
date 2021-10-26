@@ -684,7 +684,7 @@
         }
         .message-list-self {
             display: flex;
-            justify-content: end;
+            justify-content: flex-end;
             padding-top: 12px;
             padding-bottom: 12px;
         }
